@@ -116,23 +116,57 @@ const Workspace = () => {
             <span className="text-sm font-semibold text-foreground">Input Data</span>
             <FormatSelect value={inputFormat} onChange={setInputFormat} />
           </div>
-          <textarea
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onFocus={() => setInputFocused(true)}
-            onBlur={() => setInputFocused(false)}
-            placeholder="Paste your JSON, CSV or XML data here..."
-            className={`flex-1 min-h-[200px] lg:min-h-0 w-full p-4 rounded-xl bg-input border border-border font-mono text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none transition-shadow ${
-              inputFocused ? "glow-border-active" : "glow-border"
+          <div
+            className={`relative flex-1 min-h-[200px] lg:min-h-0 rounded-xl transition-shadow ${
+              isDragging ? "glow-border-active" : inputFocused ? "glow-border-active" : "glow-border"
             }`}
-            spellCheck={false}
-          />
-          <button
-            onClick={() => { setInputValue(""); setOutputValue(""); }}
-            className="mt-2 self-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-all"
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
           >
-            <Trash2 className="w-3 h-3" /> Clear
-          </button>
+            <textarea
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+              placeholder="Paste your JSON, CSV or XML data here, or drag & drop a file..."
+              className="w-full h-full p-4 rounded-xl bg-input border-none font-mono text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none"
+              spellCheck={false}
+            />
+            {isDragging && (
+              <div className="absolute inset-0 rounded-xl bg-primary/10 border-2 border-dashed border-primary/50 flex items-center justify-center pointer-events-none">
+                <div className="flex flex-col items-center gap-2 text-primary">
+                  <Upload className="w-8 h-8" />
+                  <span className="text-sm font-medium">Drop file here</span>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={() => { setInputValue(""); setOutputValue(""); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-all"
+            >
+              <Trash2 className="w-3 h-3" /> Clear
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-all"
+            >
+              <Upload className="w-3 h-3" /> Upload File
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,.csv,.xml,.txt"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileRead(file);
+                e.target.value = "";
+              }}
+            />
+          </div>
         </div>
 
         {/* Transform Button */}
