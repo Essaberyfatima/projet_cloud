@@ -13,6 +13,50 @@ const Workspace = () => {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [copied, setCopied] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const detectFormat = useCallback((filename: string, content: string): DataFormat => {
+    const ext = filename.split(".").pop()?.toLowerCase();
+    if (ext === "json") return "JSON";
+    if (ext === "csv") return "CSV";
+    if (ext === "xml") return "XML";
+    const trimmed = content.trim();
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) return "JSON";
+    if (trimmed.startsWith("<?xml") || trimmed.startsWith("<")) return "XML";
+    return "CSV";
+  }, []);
+
+  const handleFileRead = useCallback((file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File too large (max 5MB)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      setInputValue(text);
+      const detected = detectFormat(file.name, text);
+      setInputFormat(detected);
+      toast.success(`Loaded ${file.name} (detected as ${detected})`);
+    };
+    reader.onerror = () => toast.error("Failed to read file");
+    reader.readAsText(file);
+  }, [detectFormat]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileRead(file);
+  }, [handleFileRead]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback(() => setIsDragging(false), []);
 
   const handleTransform = useCallback(() => {
     if (!inputValue.trim()) {
