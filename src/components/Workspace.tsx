@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { ArrowRight, Copy, Download, Trash2, Check } from "lucide-react";
+import { useState, useCallback, useRef } from "react";
+import { ArrowRight, Copy, Download, Trash2, Check, Upload } from "lucide-react";
 import FormatSelect from "./FormatSelect";
 import HistoryPanel, { type HistoryEntry } from "./HistoryPanel";
 import { transformData, type DataFormat } from "@/lib/transform";
@@ -13,6 +13,50 @@ const Workspace = () => {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [copied, setCopied] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const detectFormat = useCallback((filename: string, content: string): DataFormat => {
+    const ext = filename.split(".").pop()?.toLowerCase();
+    if (ext === "json") return "JSON";
+    if (ext === "csv") return "CSV";
+    if (ext === "xml") return "XML";
+    const trimmed = content.trim();
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) return "JSON";
+    if (trimmed.startsWith("<?xml") || trimmed.startsWith("<")) return "XML";
+    return "CSV";
+  }, []);
+
+  const handleFileRead = useCallback((file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File too large (max 5MB)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      setInputValue(text);
+      const detected = detectFormat(file.name, text);
+      setInputFormat(detected);
+      toast.success(`Loaded ${file.name} (detected as ${detected})`);
+    };
+    reader.onerror = () => toast.error("Failed to read file");
+    reader.readAsText(file);
+  }, [detectFormat]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileRead(file);
+  }, [handleFileRead]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback(() => setIsDragging(false), []);
 
   const handleTransform = useCallback(() => {
     if (!inputValue.trim()) {
@@ -72,23 +116,57 @@ const Workspace = () => {
             <span className="text-sm font-semibold text-foreground">Input Data</span>
             <FormatSelect value={inputFormat} onChange={setInputFormat} />
           </div>
-          <textarea
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onFocus={() => setInputFocused(true)}
-            onBlur={() => setInputFocused(false)}
-            placeholder="Paste your JSON, CSV or XML data here..."
-            className={`flex-1 min-h-[200px] lg:min-h-0 w-full p-4 rounded-xl bg-input border border-border font-mono text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none transition-shadow ${
-              inputFocused ? "glow-border-active" : "glow-border"
+          <div
+            className={`relative flex-1 min-h-[200px] lg:min-h-0 rounded-xl transition-shadow ${
+              isDragging ? "glow-border-active" : inputFocused ? "glow-border-active" : "glow-border"
             }`}
-            spellCheck={false}
-          />
-          <button
-            onClick={() => { setInputValue(""); setOutputValue(""); }}
-            className="mt-2 self-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-all"
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
           >
-            <Trash2 className="w-3 h-3" /> Clear
-          </button>
+            <textarea
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+              placeholder="Paste your JSON, CSV or XML data here, or drag & drop a file..."
+              className="w-full h-full p-4 rounded-xl bg-input border-none font-mono text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none"
+              spellCheck={false}
+            />
+            {isDragging && (
+              <div className="absolute inset-0 rounded-xl bg-primary/10 border-2 border-dashed border-primary/50 flex items-center justify-center pointer-events-none">
+                <div className="flex flex-col items-center gap-2 text-primary">
+                  <Upload className="w-8 h-8" />
+                  <span className="text-sm font-medium">Drop file here</span>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={() => { setInputValue(""); setOutputValue(""); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-all"
+            >
+              <Trash2 className="w-3 h-3" /> Clear
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-all"
+            >
+              <Upload className="w-3 h-3" /> Upload File
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,.csv,.xml,.txt"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileRead(file);
+                e.target.value = "";
+              }}
+            />
+          </div>
         </div>
 
         {/* Transform Button */}
