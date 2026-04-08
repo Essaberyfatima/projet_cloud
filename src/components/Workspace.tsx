@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { ArrowRight, Copy, Download, Trash2, Check } from "lucide-react";
+import { useState, useCallback, useRef } from "react";
+import { ArrowRight, Copy, Download, Trash2, Check, Upload } from "lucide-react";
 import FormatSelect from "./FormatSelect";
 import HistoryPanel, { type HistoryEntry } from "./HistoryPanel";
 import { transformData, type DataFormat } from "@/lib/transform";
