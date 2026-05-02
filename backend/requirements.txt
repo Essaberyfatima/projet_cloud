@@ -1,0 +1,6 @@
+fastapi>=0.103.0
+uvicorn>=0.23.2
+pydantic>=2.3.0
+pandas>=2.0.0
+xmltodict>=0.13.0
+dicttoxml>=1.7.16

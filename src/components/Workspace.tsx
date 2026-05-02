@@ -2,8 +2,9 @@ import { useState, useCallback, useRef } from "react";
 import { ArrowRight, Copy, Download, Trash2, Check, Upload } from "lucide-react";
 import FormatSelect from "./FormatSelect";
 import HistoryPanel, { type HistoryEntry } from "./HistoryPanel";
-import { transformData, type DataFormat } from "@/lib/transform";
+import { type DataFormat } from "@/lib/transform";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 const Workspace = () => {
   const [inputFormat, setInputFormat] = useState<DataFormat>("JSON");
@@ -58,29 +59,56 @@ const Workspace = () => {
 
   const handleDragLeave = useCallback(() => setIsDragging(false), []);
 
-  const handleTransform = useCallback(() => {
+  const fetchHistory = useCallback(async () => {
+    try {
+      const res = await fetch("http://localhost:8000/history");
+      const data = await res.json();
+      const mapped = data.map((item: any, i: number) => ({
+        id: item.timestamp + i,
+        from: item.input_format.toUpperCase() as DataFormat,
+        to: item.output_format.toUpperCase() as DataFormat,
+        inputPreview: (item.input_data || "").slice(0, 30),
+        timestamp: new Date(item.timestamp),
+        input: item.input_data || "",
+      }));
+      setHistory(mapped);
+    } catch(err) {
+      console.error("Failed to fetch history");
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  const handleTransform = useCallback(async () => {
     if (!inputValue.trim()) {
       toast.error("Please paste some data first");
       return;
     }
     try {
-      const result = transformData(inputValue, inputFormat, outputFormat);
-      setOutputValue(result);
+      const res = await fetch("http://localhost:8000/transform", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          input_data: inputValue,
+          input_format: inputFormat.toLowerCase(),
+          output_format: outputFormat.toLowerCase()
+        })
+      });
+      const result = await res.json();
 
-      const entry: HistoryEntry = {
-        id: crypto.randomUUID(),
-        from: inputFormat,
-        to: outputFormat,
-        inputPreview: inputValue.slice(0, 30),
-        timestamp: new Date(),
-        input: inputValue,
-      };
-      setHistory((prev) => [entry, ...prev].slice(0, 10));
+      if (result.status === "error") {
+        throw new Error(result.message);
+      }
+
+      setOutputValue(result.output_data);
       toast.success(`Converted ${inputFormat} → ${outputFormat}`);
+      fetchHistory();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Transformation failed");
     }
-  }, [inputValue, inputFormat, outputFormat]);
+  }, [inputValue, inputFormat, outputFormat, fetchHistory]);
 
   const handleCopy = useCallback(async () => {
     await navigator.clipboard.writeText(outputValue);
