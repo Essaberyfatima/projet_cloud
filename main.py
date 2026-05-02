@@ -1,20 +1,42 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from routers import transform
 
-app = FastAPI(title="DataShift API", description="Data Format Transformer API")
+# =========================
+# App Initialization
+# =========================
+app = FastAPI(
+    title="DataShift API",
+    description="Data Format Transformer API",
+    version="1.0.0"
+)
 
-# Add CORS middleware to allow requests from both typical React local dev ports
+# =========================
+# CORS Configuration
+# =========================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # فـ production تقدر تحدد domain ديالك
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include routers
+# =========================
+# Routers
+# =========================
 app.include_router(transform.router)
+
+# =========================
+# Basic Routes
+# =========================
+@app.get("/")
+def root():
+    return {
+        "status": "API running",
+        "message": "Welcome to DataShift API"
+    }
 
 @app.get("/health")
 def health_check():
