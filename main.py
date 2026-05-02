@@ -31,12 +31,6 @@ app.include_router(transform.router)
 # =========================
 # Basic Routes
 # =========================
-@app.get("/")
-def root():
-    return {
-        "status": "API running",
-        "message": "Welcome to DataShift API"
-    }
 
 @app.get("/health")
 def health_check():
