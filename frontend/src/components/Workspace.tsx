@@ -6,6 +6,8 @@ import { type DataFormat } from "@/lib/transform";
 import { toast } from "sonner";
 import { useEffect } from "react";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
 const Workspace = () => {
   const [inputFormat, setInputFormat] = useState<DataFormat>("JSON");
   const [outputFormat, setOutputFormat] = useState<DataFormat>("CSV");
@@ -61,7 +63,7 @@ const Workspace = () => {
 
   const fetchHistory = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:8000/history");
+      const res = await fetch(`${API_URL}/history`);
       const data = await res.json();
       const mapped = data.map((item: any, i: number) => ({
         id: item.timestamp + i,
@@ -87,7 +89,7 @@ const Workspace = () => {
       return;
     }
     try {
-      const res = await fetch("http://localhost:8000/transform", {
+      const res = await fetch(`${API_URL}/transform`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

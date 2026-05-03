@@ -6,7 +6,8 @@ const Navbar = () => {
   const [status, setStatus] = useState<"Online" | "Offline" | "Checking...">("Checking...");
 
   useEffect(() => {
-    fetch("http://localhost:8000/health")
+    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      fetch(`${API_URL}/health`)
       .then((res) => res.json())
       .then((data) => {
         if (data.status === "online") {
